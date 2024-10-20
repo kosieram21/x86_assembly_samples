@@ -1,5 +1,6 @@
 section .bss
-    input_buffer: resb 11 ; 10 digits + null byte
+  input_buffer: resb 11  ; 10 digits + null byte
+  output_buffer: resb 11 ; 10 digits + null byte
 
 section .data
 	functionMsg:     db 'Fibonacci Caculator',10
@@ -8,7 +9,7 @@ section .data
 	inputMsg:        db 'n: '
 	inputMsgLen:     equ $-inputMsg
 	
-	outputMsg:       db 'The nth Fibonacci number is ',10
+	outputMsg:       db 'The nth Fibonacci number is '
 	outputMsgLen:    equ $-outputMsg
 	
 	newline:         db 10
@@ -58,7 +59,7 @@ _start:
     
 	.ascii2int:
 	  movzx edx, byte [ebx] ; Move the a bytes from EBX into EDX (zero extended)
-	  cmp edx,0             ; Check for newline character - means we are done parsing input
+	  cmp edx,0             ; Check for null byte - means we are done parsing input
 	  je .compute_fib       ; Conditional jump to after the ascii2int loop
 	  sub edx,'0'           ; Convert the ascii character to an integer
 	  imul eax,eax,10       ; Shift all digits in the accumulator (EAX) 1 digit to the right
@@ -66,6 +67,7 @@ _start:
 	  inc ebx               ; Increment the buffer pointer (EBX)
 	  jmp .ascii2int        ; Unconditional jump to start of ascii2int loop
 	  
+	; Compute the nth Fibonacci number
 	.compute_fib:
 	  mov ebx,0             ; Store F0 in EBX
 	  mov ecx,1             ; Store F1 in ECX
@@ -83,18 +85,34 @@ _start:
 	  cmp eax,0             ; Check if there are any remaining Fibonacci numbers to compute
 	  je .int2ascii         ; Conditional jump to start of int2ascii loop
 	  jmp .next_fib         ; Unconditional jump to start of next_fib loop
-	  
 	.F0_base_case:
 	  mov edx,ebx           ; Move F0 from EBX to EDX
 	  jmp .int2ascii        ; Unconditional jump to start of int2ascii loop
-	  
 	.F1_base_case:
 	  mov edx,ecx           ; Move F1 from ECX to EDX
 	  jmp .int2ascii        ; Unconditional jump to start of int2ascii loop
 	  
+	; Convert the nth Fibonacci number into a ASCII array in the output buffer
 	.int2ascii:
-	  ;;Finish me
-	  jmp .done             ; Unconditional jump to done
+	  mov ecx, output_buffer; Pointer to the output buffer
+	  mov eax,edx           ; Move the nth Fibonacci number (in EDX) into the EAX (quotient) register for division
+	  mov ebx,10            ; Put the divisor (10) into EBX to prepare for division
+	  xor edi,edi           ; Initialize stack count
+	.peel_digits:
+	  xor edx,edx           ; Clear the EDX (remainder) register to prepare for division
+	  div ebx               ; Divide EAX by EBX. The quotient will be in EAX and the remainder in EDX
+	  add dl, '0'           ; Convert the remainder to ASCII (lower 8 bits)
+	  push rdx              ; Push RDX onto the stack - this is because digits are in reverse order
+	  inc edi               ; Increment stack count
+	  cmp eax,0             ; Check if any digits remain
+	  jne .peel_digits      ; Unconditional jump to start of peel_digits loop
+	  mov esi,edi           ; Store maximum stack size in aux register
+	.reverse_digits:
+	  pop rdx               ; Pop the next digit of the stack
+	  mov [ecx], dl         ; Store the next digit in the output buffer
+	  inc ecx               ; Increment the buffer pointer (ECX)
+	  dec edi               ; Decrement stack count
+    jge .reverse_digits   ; Conditional jump to start of the reverse_digits loop
 	  
 	.done:
 	  ; Write the output message
@@ -104,12 +122,19 @@ _start:
 	  mov edx,outputMsgLen  ; Output message length
 	  int 80h               ; Call the kernel
 	  
+	  ; Read user input
+	  mov eax,4             ; The system call for write (sys_write)
+	  mov ebx,1             ; File descriptor 1 - standard output
+	  mov ecx,output_buffer ; Pointer to the output buffer
+	  mov edx,esi           ; Maximum bytes to write - max stack size
+	  int 80h               ; Call the kernel
+	  
 	  ; Write newline character
-	  mov eax,4               ; The system call for write (sys_write)
-	  mov ebx,1               ; File descriptor 1 - standard output
-	  mov ecx,newline         ; Pointer to the newline character
-	  mov edx,1               ; Bytes to write (1)
-	  int 80h                 ; Call the kernel
+	  mov eax,4             ; The system call for write (sys_write)
+	  mov ebx,1             ; File descriptor 1 - standard output
+	  mov ecx,newline       ; Pointer to the newline character
+	  mov edx,1             ; Bytes to write (1)
+	  int 80h               ; Call the kernel
 	
 	  ; Exit program
 	  mov eax,1             ; The system call for exit (sys_exit)
