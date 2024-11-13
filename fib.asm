@@ -112,7 +112,7 @@ _start:
 	  mov [ecx], dl         ; Store the next digit in the output buffer
 	  inc ecx               ; Increment the buffer pointer (ECX)
 	  dec edi               ; Decrement stack count
-    jge .reverse_digits   ; Conditional jump to start of the reverse_digits loop
+    	  jge .reverse_digits   ; Conditional jump to start of the reverse_digits loop
 	  
 	.done:
 	  ; Write the output message
