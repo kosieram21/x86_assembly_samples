@@ -55,7 +55,7 @@ _start:
 	
 	; Convert the input buffer into an integer
 	mov ebx, input_buffer   ; Store input buffer pointer in EBX
-  xor eax, eax            ; Clear EAX to accumulate the result
+  	xor eax, eax            ; Clear EAX to accumulate the result
     
 	.ascii2int:
 	  movzx edx, byte [ebx] ; Move the a bytes from EBX into EDX (zero extended)
